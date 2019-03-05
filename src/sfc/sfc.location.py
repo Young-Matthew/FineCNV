@@ -3,14 +3,20 @@
 #contain the information of CNV.
 
 import sys, pysam, re, os
+from nmismatch import nmismatch
+if len(sys.argv) < 2:
+    print('python3 ' + sys.argv[0] + 'BAM' + 'OUTDir')
+    exit()
 
 bam = pysam.AlignmentFile(sys.argv[1], 'rb')
-outfile = os.path.splitext(os.path.basename(sys.argv[1]))[0] + '.sfc.txt'
+outfile = [sys.argv[2] + '/' if len(sys.argv) == 3 else ''][0] + os.path.splitext(os.path.basename(sys.argv[1]))[0] + '.sfc_breakpoints.location.txt'
 location = {}
 # chr -> position -> freq
 
 for read in bam:
-    read_align = read.aligned_pairs
+
+    if nmismatch(read) > 4:
+        continue
 
     if read.cigar[0][0] == 4:
         # Softclip on 5' end
@@ -21,7 +27,7 @@ for read in bam:
             location[read.reference_name][read.reference_start +1] = 1
         else:
             location[read.reference_name][read.reference_start +1] += 1
-        continue
+
     elif read.cigar[-1][0] == 4:
         # Softclip on 3' end
         if read.reference_name not in location:
@@ -31,14 +37,11 @@ for read in bam:
             location[read.reference_name][read.reference_end +1] = 1
         else:
             location[read.reference_name][read.reference_end +1] += 1
-        continue
-    if 'x' in read.reference_name or 'X' in read.reference_name:
-        break
 
 bam.close()
 with open(outfile, 'w') as out:
     print('chr\tposition\tfreq', file = out)
-    for chr_number in range(1,23):
+    for chr_number in list(range(1,23)) + ['X', 'Y']:
         chr = 'chr' + str(chr_number)
         pos_set = sorted([i for i in location[chr].keys()])
         for pos in pos_set:
