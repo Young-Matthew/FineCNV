@@ -9,15 +9,23 @@ if len(sys.argv) < 2:
     exit()
 
 bam = pysam.AlignmentFile(sys.argv[1], 'rb')
-outfile = [sys.argv[2] + '/' if len(sys.argv) == 3 else ''][0] + os.path.splitext(os.path.basename(sys.argv[1]))[0] + '.sfc_breakpoints.location.txt'
+#outfile = [sys.argv[2] + '/' if len(sys.argv) == 3 else ''][0] + os.path.splitext(os.path.basename(sys.argv[1]))[0] + '.sfc_breakpoints.location.txt'
+outfile = [sys.argv[2] + '/' if len(sys.argv) == 3 else ''][0] + sys.argv[1].split('/')[7].split('.')[0] + '.wesplus.sfc_breakpoints.location.txt'
+
 location = {}
 # chr -> position -> freq
 
 for read in bam:
+    
+    try:
+        if read.cigarstring is None:
+            continue
+    except:
+        continue
 
     if nmismatch(read) > 4:
         continue
-
+    
     if read.cigar[0][0] == 4:
         # Softclip on 5' end
         if read.reference_name not in location:
